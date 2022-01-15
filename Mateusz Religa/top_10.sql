@@ -62,3 +62,35 @@ dense_rank() over (order by vt.trips_qty desc) as ranking
 from v_trip vt
 join v_percentile vp
 on vt.trip_name = vp.trip_name
+
+select
+*,
+count(*) over (order by vp.trip_name)
+from v_trip vt
+join v_percentile vp
+on vt.trip_name = vp.trip_name
+where vt.duration < vp.per_09 
+
+select
+*
+from v_trip vt
+join v_percentile vp
+on vt.trip_name = vp.trip_name
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
