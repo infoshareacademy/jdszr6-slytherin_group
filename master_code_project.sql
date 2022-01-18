@@ -11,13 +11,41 @@
 
 ------DM CODE ----------
 
-/*Code below creates 2 views and 6 statistics showing weather attributes vs number of daily rides. 
-View v3_weather_with_ranges shows weather data + weather attribtues ranges.
-v3_daily_rides_with_weather shows cumulative daily rides with weather and weather ranges.
-All are filtered to zip code 74107 which is the most popular zip code in terms of total number of rides. 
-*/
- 
- /* Weather view with 7 calculated columns ordering each observations into one of min-max range of weather attribute like temp,Dew_point,pressure, wind speed, max wind gusts, precipitation & visibility*/ 
+/*We need to merge weather & trips tables by date & zip code. Zip code in trips is unreliable so we need to derive it from id of start & end station. 
+ * In first step we take station table and add zip code by each city name and create a view v3_station_csv_with_zip_cod - new field is called zip_code_station*/
+create materialized view v3_station_csv_with_zip_code as select 
+	*,
+	case
+	when city='Palo Alto' then 94301
+	when city='San Jose' then 95113
+	when city='Redwood City' then 94063
+	when city='Mountain View' then 94041
+	when city='San Francisco' then 94107
+	else 0
+	end as Zip_code_station
+from station_csv sc;
+
+/* In second step we add start, end cities & zip codes from station view created in step one to to trips table and create a v3_trips_start_end_city_zip_code with 4 new columns
+  start_zip_code & end_zip_code for zip codes and start, end cities for cities*/ 
+create materialized view v3_trips_with_cities_zip_codes as 
+with trips_plus_end_zip as 
+	(
+	select 
+	sc.city end_city, sc.zip_code_station end_zip_code, 
+	tc.id, tc.duration,tc.start_date, tc.start_station_name,tc.start_station_id, tc.end_date, tc.end_station_name, tc.end_station_id, tc.bike_id,tc.subscription_type, tc.zip_code as bad_trip_zip_code,
+	tc.start_station_id||'-'||tc.end_station_id trip_route, 1 as ride_no
+	from trip_csv tc 
+	join v3_station_csv_with_zip_code sc 
+	on tc.end_station_id = sc.id 
+	)
+select scw.city as start_city,scw.zip_code_station as start_zip_code,  trips_plus_end_zip.*
+from trips_plus_end_zip
+join v3_station_csv_with_zip_code scw 
+on trips_plus_end_zip.start_station_id=scw.id;
+/*no rows were lost from trips_csv and still 699k trips are there but now with zip codes of start and end station. I.e. there is integrity between start, end station in trips and those in stations table
+ * also there is only 1k trips from one city to the other i.e. where start & end cities are different*/
+
+ /* We now create view on top of weather table that clusters all observations by 5ntiles of each Weather and another custom clustering. Those clusters are kept in columns: range_... */ 
 create or replace view v3_weather_with_ranges as
 /*Order observations into one of 5 ntiles per weather attribute. Those are technical columns that are used to define tiles min-max range.*/
 with weather_ntiles as 	
@@ -32,7 +60,6 @@ with weather_ntiles as
 	ntile(5) over (order by precipitation_inches) ntile_precipitation_inches,
 	ntile(5) over (order by mean_visibility_miles) ntile_mean_visibility_miles
 	from weather_csv wc 
-	where zip_code ='94107'
 	)
 /*Order observations into 1 of 5 ranges per each weather attribute ascending*/
 select 
@@ -43,29 +70,76 @@ ntile_mean_wind_speed_mph||'#'||min(mean_wind_speed_mph) over (partition by ntil
 ntile_max_gust_speed||'#'||min(max_gust_speed_mph) over (partition by ntile_max_gust_speed)||'-'||max(max_gust_speed_mph) over (partition by ntile_max_gust_speed) as range_max_gust_speed,
 ntile_mean_visibility_miles||'#'|| min(mean_visibility_miles) over (partition by ntile_mean_visibility_miles)||'-'||max(mean_visibility_miles) over (partition by ntile_mean_visibility_miles) as range_mean_visibility_miles,
 ntile_precipitation_inches||'#'|| (min(precipitation_inches) over (partition by ntile_precipitation_inches))::double precision||'-'||(max(precipitation_inches) over (partition by ntile_precipitation_inches))::double precision as range_precipitation_inches,
+107.3724420191 as tot_avg, 110 as tot_median, /*Need this for % calculation of averages & medians in ranges*/
+case 
+	when weather_ntiles.mean_sea_level_pressure_inches between 29.6 and 30.2 then 'Ok' 
+	when weather_ntiles.mean_sea_level_pressure_inches>30.2 then 'High'
+	when weather_ntiles.mean_sea_level_pressure_inches <29.6 then 'Low'
+	else 'Error'
+end as Cluster_pressure /*Definitions of low, normal, high taken from https://dnr.wisconsin.gov/topic/labCert/BODCalibration2.html*/,
+case 
+	when weather_ntiles.mean_temperature_f between 60.8 and 77 then 'Ok' 
+	when weather_ntiles.mean_temperature_f>77 then 'High'
+	when weather_ntiles.mean_temperature_f<60.8 then 'Low'
+	else 'Error'
+end as Cluster_temperature, /*Definitions of low, normal, high https://www.arabiaweather.com/en/content/what-are-the-best-weather-conditions-to-enjoy-cycling*/
+case 
+	when weather_ntiles.mean_wind_speed_mph between 0 and 12 then 'Gentle' 
+	when weather_ntiles.mean_wind_speed_mph between 12 and 24 then 'Moderate'
+	when weather_ntiles.mean_wind_speed_mph>24 then 'Extreme'
+	else 'Error'
+end as Cluster_wind, /*Definitions from https://www.weather.gov/pqr/wind*/
+case 
+	when weather_ntiles.mean_dew_point_f between 0 and 55 then 'Ok' 
+	when weather_ntiles.mean_dew_point_f between 55 and 65 then 'Strong'
+	when weather_ntiles.mean_dew_point_f>65 then 'Opressive'
+	else 'Error'
+end as Cluster_dew_point,
+case
+	when length(weather_ntiles.events)<>0 then 'Rain_Fog_Etc' /*jak jest deszcz albo mgla to zla pogoda*/
+	when length(weather_ntiles.events)=0 then 'No Rain_Fog_etc' 
+end as Cluster_events,
 *
 from weather_ntiles;
 
+/*In next step we create detailed view combining weather data & all rides*/ 
+create materialized view v3_rides_with_weather as
+select 
+* 
+from v3_trips_with_cities_zip_codes tc
+join v3_weather_with_ranges vwwr
+on tc.start_zip_code||'-'||tc.start_date::date=vwwr.zip_code||'-'||vwwr.date;
 
-/* View with amount of daily rides & weather on that day & zip code with ranges of weather attributes*/ 
+/*In next step we create aggregated view combining weather data & daily rides numbers*/ 
 create view v3_daily_rides_with_weather as
 with daily_rides as 
 	(
 	select 
-	zip_code trip_zip_code, start_date::date, count(*) daily_rides 
-	from trip_csv tc 
-	where zip_code = '94107'
-	group by zip_code, start_date::date
-	order by zip_code, start_date::date
+	start_zip_code trip_zip_code, start_date::date, count(*) daily_rides
+	from v3_trips_with_cities_zip_codes tc 
+	group by start_zip_code, start_date::date
+	order by start_zip_code, start_date::date
 	)
 select * 
 from daily_rides dr 
 join v3_weather_with_ranges vwwr   
-on dr.start_date::date||dr.trip_zip_code = vwwr.date::date||cast(vwwr.zip_code as text)
-where dr.trip_zip_code='94107'
+on dr.start_date::date||'.'||dr.trip_zip_code = vwwr.date::date||'.'||cast(vwwr.zip_code as text)
 order by dr.start_date desc;
 
-/*statystyka ilosci przejazdow w robiciu na zip cody i na rozne temperatury*/
+/*In next step we create an hourly status view on status table - to reduce the size needed to assess occupation of station by hour*/
+create materialized view v3_status_hourly as
+select 
+station_id, 
+date_trunc('hour',time) date_s, 
+avg(bikes_available) as bikes_available,
+avg(docks_available) as docks_available
+from status_csv sc group by station_id, date_trunc('hour',time) 
+
+with dupa as
+	(select sum(vrww.ride_no) hourly_rides from v3_rides_with_weather vrww group by date_part('hour',start_date)) 
+select avg(hourly_rides) from dupa
+
+/*Statistics on hourly rides number vs team temp ntiles*/
 with avg_rides_per_temp as
 	(
 	select 
@@ -94,7 +168,7 @@ round((r_median-first_value(r_median) over (partition by trip_zip_code order by 
 round(perc_90) perc90, r_max 
 from avg_rides_per_temp order by trip_zip_code, ntiles;
 
-/*statystyka ilosci przejazdow w robiciu na zip cody i na punkt rosy*/
+/*Statistics on hourly rides number vs dew point ntiles*/
 with avg_rides_per_weather as
 	(
 	select 
@@ -123,7 +197,7 @@ round((r_median-first_value(r_median) over (partition by trip_zip_code order by 
 round(perc_90) perc90, r_max 
 from avg_rides_per_weather order by trip_zip_code, ntiles;
 
-/*statystyka ilosci przejazdow w robiciu na zip cody i na cisnienie*/
+/*Statistics on hourly rides number vs air pressure ntiles*/
 with avg_rides_per_weather as
 	(
 	select 
@@ -152,7 +226,7 @@ round((r_median-first_value(r_median) over (partition by trip_zip_code order by 
 round(perc_90) perc90, r_max 
 from avg_rides_per_weather order by trip_zip_code, ntiles;
 
-/*statystyka ilosci przejazdow w robiciu na zip cody i na predkosc wiatru*/
+/*Statistics on hourly rides number vs wind speed ntiles*/
 with avg_rides_per_weather as
 	(
 	select 
@@ -181,7 +255,7 @@ round((r_median-first_value(r_median) over (partition by trip_zip_code order by 
 round(perc_90) perc90, r_max 
 from avg_rides_per_weather order by trip_zip_code, ntiles;
 
-/*statystyka ilosci przejazdow w robiciu na zip cody i na porywy wiatru*/
+/*Statistics on hourly rides number vs wind gusts ntiles*/
 with avg_rides_per_weather as
 	(
 	select 
@@ -210,7 +284,7 @@ round((r_median-first_value(r_median) over (partition by trip_zip_code order by 
 round(perc_90) perc90, r_max 
 from avg_rides_per_weather order by trip_zip_code, ntiles;
 
-/*statystyka ilosci przejazdow w robiciu na zip cody i na widocznosc*/
+/*Statistics on hourly rides number vs visibility ntiles*/
 with avg_rides_per_weather as
 	(
 	select 
@@ -239,7 +313,7 @@ round((r_median-first_value(r_median) over (partition by trip_zip_code order by 
 round(perc_90) perc90, r_max 
 from avg_rides_per_weather order by trip_zip_code, ntiles;
 
-/*Ilosc przejazdow w uzaleznieniu od eventu*/
+/*Statistics on hourly rides number vs various weather events ntiles*/
 with avg_rides_per_weathers as
 	(
 	select 
@@ -252,7 +326,6 @@ with avg_rides_per_weathers as
 	round(percentile_cont(0.90) within group (order by daily_rides asc)) perc_90,
 	max(daily_rides) max_rides
 	from v3_daily_rides_with_weather vdraw 
-	where zip_code = 94107
 	group by trip_zip_code, lower(events) 
 	)
 select 
@@ -266,9 +339,7 @@ round((r_median-lag(r_median) over (partition by trip_zip_code order by ntiles))
 round((r_median-first_value(r_median) over (partition by trip_zip_code order by ntiles))/(first_value(r_median) over (partition by trip_zip_code order by ntiles))*100)||'%' r_medina_vs_first_ntile,
 perc_90,max_rides r_max
 from avg_rides_per_weathers 
-order by trip_zip_code, ntiles
-
-
+order by trip_zip_code, ntiles;
 
 
 
