@@ -7,7 +7,7 @@ SELECT distinct time, extract(year from time)||'-'||extract(month from time)||'-
  
  /*dni pracujace*/
 create view v_dni_robocze as
-SELECT distinct extract(year from time)||'-'||extract(month from time)||'-'||extract(day from time) as nowa_data
+SELECT distinct time, extract(year from time)||'-'||extract(month from time)||'-'||extract(day from time) as nowa_data
   FROM status_csv sc 
  WHERE EXTRACT(ISODOW FROM sc.time) IN (1, 2,3,4,5)
  
@@ -53,7 +53,7 @@ on v_weekendy.time=sc.time
 select *,
 avg(sc.bikes_available) over (partition by  nowa_data) as sr_w_drobocze,
 min(sc.bikes_available) over (partition by  nowa_data) as min_w_drobocze,
-max(sc.bikes_available) over (partition by nowa_data) as max_w_d.robocze
+max(sc.bikes_available) over (partition by nowa_data) as max_w_drobocze
 from status_csv sc 
 join v_dni_robocze
 on v_dni_robocze.time=sc.time
