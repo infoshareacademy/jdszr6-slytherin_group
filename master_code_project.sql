@@ -25,6 +25,8 @@ create materialized view v3_station_csv_with_zip_code as select
 	end as Zip_code_station
 from station_csv sc;
 
+select count(*) from weather_csv wc where max_gust_speed_mph is null 
+
 /* In second step we add start, end cities & zip codes from station view created in step one to to trips table and create a v3_trips_start_end_city_zip_code with 4 new columns
   start_zip_code & end_zip_code for zip codes and start, end cities for cities*/ 
 create materialized view v3_trips_with_cities_zip_codes as 
@@ -44,6 +46,9 @@ join v3_station_csv_with_zip_code scw
 on trips_plus_end_zip.start_station_id=scw.id;
 /*no rows were lost from trips_csv and still 699k trips are there but now with zip codes of start and end station. I.e. there is integrity between start, end station in trips and those in stations table
  * also there is only 1k trips from one city to the other i.e. where start & end cities are different*/
+
+/*Fixing data in weather_csv table so it clusters same way, initially there were records with Rain and rain value*/
+update weather_csv set events = 'Rain' where events = 'rain'
 
  /* We now create view on top of weather table that clusters all observations by 5ntiles of each Weather and another custom clustering. Those clusters are kept in columns: range_... */ 
 create or replace view v3_weather_with_ranges as
@@ -103,12 +108,29 @@ end as Cluster_events,
 from weather_ntiles;
 
 /*In next step we create detailed view combining weather data & all rides*/ 
-create materialized view v3_rides_with_weather as
+create materialized view v3_rides_with_weather0 as
 select 
 * 
 from v3_trips_with_cities_zip_codes tc
 join v3_weather_with_ranges vwwr
 on tc.start_zip_code||'-'||tc.start_date::date=vwwr.zip_code||'-'||vwwr.date;
+
+/*In next step we add geo data from stations csv to above view so it can be drawn on map*/
+create or replace view v3_rides_with_weather as
+with start_geo as
+	(select 	
+	vw.*,sc.lat as start_lat, sc.long start_long
+	from v3_rides_with_weather0 vw
+	join station_csv sc
+	on vw.start_station_id=sc.id 
+	)
+select 
+sg.*,sc2.lat end_lat, sc2.long end_long
+from start_geo sg
+join station_csv sc2 
+on sg.end_station_id=sc2.id
+
+select * from v3_rides_with_weather
 
 /*In next step we create aggregated view combining weather data & daily rides numbers*/ 
 create view v3_daily_rides_with_weather as
@@ -126,7 +148,7 @@ join v3_weather_with_ranges vwwr
 on dr.start_date::date||'.'||dr.trip_zip_code = vwwr.date::date||'.'||cast(vwwr.zip_code as text)
 order by dr.start_date desc;
 
-/*In next step we create an hourly status view on status table - to reduce the size needed to assess occupation of station by hour*/
+/*In next step we create an hourly status view on status table - to reduce the size needed to assess occupation*/
 create materialized view v3_status_hourly as
 select 
 station_id, 
@@ -339,7 +361,4 @@ round((r_median-lag(r_median) over (partition by trip_zip_code order by ntiles))
 round((r_median-first_value(r_median) over (partition by trip_zip_code order by ntiles))/(first_value(r_median) over (partition by trip_zip_code order by ntiles))*100)||'%' r_medina_vs_first_ntile,
 perc_90,max_rides r_max
 from avg_rides_per_weathers 
-order by trip_zip_code, ntiles;
-
-
-
+order by trip_zip_code, ntiles
