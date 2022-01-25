@@ -67,16 +67,32 @@ from top10dic tdc
 
 --dogranie s³ownika top 10 do trips by wyliczyæ statystyki
 --mo¿na z niej wyci¹gaæ wszystkie dane z tabeli trips po top 10
-select *,
-vt.start_station_name ,
-vt.end_station_name ,
+select distinct 
+td.trip_id_a ,
+vt.year_month ,
 sc.lat as lat_start_station,
 sc.long as long_start_station,
 sc2.lat as lat_end_station,
 sc2.long as long_end_station,
 avg(vt.duration) over (partition by td.trip_id_a) as trip_avg,
-count(*) over (partition by td.trip_id_a) as trip_qty,
+count(*) over (partition by td.trip_id_a, vt.year_month) as trip_qty,
 dense_rank () over (partition by td.trip_id_a) as ranking
+from v_trip vt 
+join top10dic td 
+on td.trip_id = vt.trip_id 
+join station_csv sc 
+on sc.id::text = left(td.trip_id_a,2)
+join station_csv sc2 
+on sc2.id::text = substring(td.trip_id_a from 4 for 2)
+
+select *
+from weather_csv wc 
+
+--top10 w czasie 
+select distinct 
+td.trip_id_a ,
+avg(vt.duration) over (partition by td.trip_id_a) as trip_avg,
+count(*) over (partition by td.trip_id_a, vt.year_month) as trip_qty,
 from v_trip vt 
 join top10dic td 
 on td.trip_id = vt.trip_id 
@@ -85,5 +101,49 @@ on sc.id = vt.start_station_id
 join station_csv sc2 
 on sc2.id = vt.end_station_id 
 
-select *
-from top10dic td 
+ 
+create view v_rank as
+select distinct 
+td.trip_id_a ,
+count(*) over (partition by td.trip_id_a) as trip_qty	
+from v_trip vt 
+join top10dic td 
+on td.trip_id = vt.trip_id 
+
+
+--fianlana tabela z po³¹czeniem s³ownika, latitude, long, trip qty, ranking
+select distinct
+td.trip_id_a ,
+vt.year_month ,
+count(*) over (partition by td.trip_id_a, vt.year_month) as trip_qty,
+dense_rank () over (order by trip_qty desc) as ranking,
+avg (vt.duration) over (partition by td.trip_id_a, vt.year_month )/60 as avg_trips_duration_per_month, 
+avg (vt.duration) over (partition by td.trip_id_a)/60 as avg_trips_duration_all, 
+sc.lat as lat_start_station,
+sc.long as long_start_station,
+sc2.lat as lat_end_station,
+sc2.long as long_end_station
+from v_rank vr
+join top10dic td 
+on td.trip_id_a = vr.trip_id_a
+join v_trip vt
+on td.trip_id = vt.trip_id
+join station_csv sc 
+on sc.id::text = left(td.trip_id_a,2)
+join station_csv sc2 
+on sc2.id::text = substring(td.trip_id_a from 4 for 2)
+
+select distinct
+td.trip_id_a ,
+dense_rank () over (order by trip_qty desc) as ranking
+from v_rank vr
+join top10dic td 
+on td.trip_id_a = vr.trip_id_a
+join v_trip vt
+on td.trip_id = vt.trip_id
+join station_csv sc 
+on sc.id::text = left(td.trip_id_a,2)
+join station_csv sc2 
+on sc2.id::text = substring(td.trip_id_a from 4 for 2)
+
+
