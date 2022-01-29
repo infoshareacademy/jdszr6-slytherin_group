@@ -640,3 +640,240 @@ select *
 from v_przen_rower
 join v_ranking2 
 on v_ranking2.start_station_id=v_przen_rower.station_id
+
+
+
+
+/* Analiza danych przy podziale na Subscriber i 'Customer oraz z uwzględnieniem top 10 tras - Mateusz Kunik */
+/* Przygotowanie danych  */
+create or replace view view_trip as
+select
+	to_char(start_date, 'yyyy-mm') as date_data,
+	start_station_id || '_' || end_station_id as trip_id,
+	duration,
+	subscription_type,
+	zip_code
+from
+	trip_csv tc;
+
+/* Analiza czasu ogólnie, przy podziale na Subscriber i Customer */
+select
+	distinct
+	subscription_type,
+	count(*) over (partition by subscription_type) as trips,
+	round(avg(duration) over (partition by subscription_type)/60, 2) as subtype_average_duration,
+	case
+		when subscription_type = 'Subscriber' then (	select round(percentile_disc(0.1) within group (order by duration)*1.0/60, 2)
+																		from view_trip
+																		where subscription_type = 'Subscriber')
+		when subscription_type = 'Customer' then (select round(percentile_disc(0.1) within group (order by duration)*1.0/60, 2)
+																		from view_trip
+																		where subscription_type = 'Customer')
+	end as tenth_percentile,
+	case
+		when subscription_type = 'Subscriber' then (	select round(percentile_disc(0.5) within group (order by duration)*1.0/60, 2)
+																		from view_trip
+																		where subscription_type = 'Subscriber')
+		when subscription_type = 'Customer' then (select round(percentile_disc(0.5) within group (order by duration)*1.0/60, 2)
+																		from view_trip
+																		where subscription_type = 'Customer')
+	end as median,
+	case
+		when subscription_type = 'Subscriber' then (	select round(percentile_disc(0.9) within group (order by duration)*1.0/60, 2)
+																		from view_trip
+																		where subscription_type = 'Subscriber')
+		when subscription_type = 'Customer' then (select round(percentile_disc(0.9) within group (order by duration)*1.0/60, 2)
+																		from view_trip
+																		where subscription_type = 'Customer')
+	end as ninetieth_percentile
+from
+	view_trip
+order by
+	subscription_type;
+
+/* Analiza czasu poszczególnych tras, przy podziale na Subscriber i Customer */
+select 	
+	distinct
+	vt.trip_id,
+	count(*) over (partition by vt.trip_id) as trips,
+	round(avg(duration) over (partition by vt.trip_id)*1.0/60, 2) as average_duration,
+	subscription_type as subtype,
+	count(*) over (partition by vt.trip_id, subscription_type) as subtype_trips,
+	round(min(duration) over (partition by vt.trip_id, subscription_type)*1.0/60, 2) as min_duration,
+	round(max(duration) over (partition by vt.trip_id, subscription_type)*1.0/60, 2) as max_duration,
+	round(avg(duration) over (partition by vt.trip_id, subscription_type)*1.0/60, 2) as subtype_average_duration,
+	tenth_percentile,
+	median,
+	ninetieth_percentile
+from
+	view_trip vt
+join (select
+			trip_id,
+			round(percentile_disc(0.1) within group (order by duration)*1.0/60, 2) as  tenth_percentile,
+			round(percentile_disc(0.5) within group (order by duration)*1.0/60, 2) as median,
+			round(percentile_disc(0.9) within group (order by duration)*1.0/60, 2) as ninetieth_percentile
+		from
+			view_trip vt
+		group by
+			trip_id) as perc
+on vt.trip_id = perc.trip_id
+order by
+	trip_id, subscription_type;
+
+/* Liczba Subscriber i Customer na przestrzeni lat */
+create or replace view view_sub as
+select
+	distinct
+	date_data,
+	count(*) over (partition by date_data, subscription_type) as subscribers
+from
+	view_trip vt
+where
+	subscription_type = 'Subscriber';
+	
+create or replace view view_cus as
+select
+	distinct
+	date_data,
+	count(*) over (partition by date_data, subscription_type) as customers
+from
+	view_trip vt
+where
+	subscription_type = 'Customer';
+	
+select
+	distinct
+	vt.date_data,
+	count(*) over (partition by vt.date_data) as trips,
+	subscribers,
+	round(subscribers*100.0/count(*) over (partition by vt.date_data)) as subscricers_percentage,
+	customers,
+	round( customers*100.0/count(*) over (partition by vt.date_data)) as  customers_percentage
+from
+	view_trip vt 
+join view_sub vs on vt.date_data = vs.date_data
+join view_cus vc on vt.date_data = vc.date_data
+order by
+	vt.date_data;
+
+	
+	
+/* Przygotowanie danych pod top 10*/
+create or replace
+view view_trip_top10 as
+select
+	date_data,
+	tdc.trip_id_a as trip_id,
+	duration,
+	subscription_type,
+	zip_code
+from
+	view_trip vt
+join top10dic_csv tdc
+on
+	vt.trip_id = tdc.trip_id;
+
+/* Analiza czasu top 10, przy podziale na Subscriber i Customer */
+select
+	distinct
+	subscription_type,
+	count(*) over (partition by subscription_type) as trips,
+	round(avg(duration) over (partition by subscription_type)/60, 2) as subtype_average_duration,
+	case
+		when subscription_type = 'Subscriber' then (	select round(percentile_disc(0.1) within group (order by duration)*1.0/60, 2)
+																		from view_trip_top10
+																		where subscription_type = 'Subscriber')
+		when subscription_type = 'Customer' then (select round(percentile_disc(0.1) within group (order by duration)*1.0/60, 2)
+																		from view_trip_top10
+																		where subscription_type = 'Customer')
+	end as tenth_percentile,
+	case
+		when subscription_type = 'Subscriber' then (	select round(percentile_disc(0.5) within group (order by duration)*1.0/60, 2)
+																		from view_trip_top10
+																		where subscription_type = 'Subscriber')
+		when subscription_type = 'Customer' then (select round(percentile_disc(0.5) within group (order by duration)*1.0/60, 2)
+																		from view_trip_top10
+																		where subscription_type = 'Customer')
+	end as median,
+	case
+		when subscription_type = 'Subscriber' then (	select round(percentile_disc(0.9) within group (order by duration)*1.0/60, 2)
+																		from view_trip_top10
+																		where subscription_type = 'Subscriber')
+		when subscription_type = 'Customer' then (select round(percentile_disc(0.9) within group (order by duration)*1.0/60, 2)
+																		from view_trip_top10
+																		where subscription_type = 'Customer')
+	end as ninetieth_percentile
+from
+	view_trip_top10
+order by 
+	subscription_type;
+	
+/* Analiza czasu poszczególnych tras z top 10, przy podziale na Subscriber i Customer */
+select 	
+	distinct
+	vt.trip_id,
+	count(*) over (partition by vt.trip_id) as trips,
+	round(avg(duration) over (partition by vt.trip_id)*1.0/60, 2) as average_duration,
+	subscription_type as subtype,
+	count(*) over (partition by vt.trip_id, subscription_type) as subtype_trips,
+	round(min(duration) over (partition by vt.trip_id, subscription_type)*1.0/60, 2) as min_duration,
+	round(max(duration) over (partition by vt.trip_id, subscription_type)*1.0/60, 2) as max_duration,
+	round(avg(duration) over (partition by vt.trip_id, subscription_type)*1.0/60, 2) as subtype_average_duration,
+	tenth_percentile,
+	median,
+	ninetieth_percentile
+from
+	view_trip_top10 vt
+join (select
+			trip_id,
+			round(percentile_disc(0.1) within group (order by duration)*1.0/60, 2) as  tenth_percentile,
+			round(percentile_disc(0.5) within group (order by duration)*1.0/60, 2) as median,
+			round(percentile_disc(0.9) within group (order by duration)*1.0/60, 2) as ninetieth_percentile
+		from
+			view_trip_top10 vt
+		group by
+			trip_id) as perc
+on vt.trip_id = perc.trip_id
+order by
+	trip_id, subscription_type;
+	
+/* Liczba Subscriber i Customer na przestrzeni lat */
+create or replace view view_sub as
+select
+	distinct
+	date_data,
+	count(*) over (partition by date_data, subscription_type) as subscribers
+from
+	view_trip_top10 vt
+where
+	subscription_type = 'Subscriber';
+	
+create or replace view view_cus as
+select
+	distinct
+	date_data,
+	count(*) over (partition by date_data, subscription_type) as customers
+from
+	view_trip_top10 vt
+where
+	subscription_type = 'Customer'	;
+	
+select
+	distinct
+	vt.date_data,
+	count(*) over (partition by vt.date_data) as trips,
+	subscribers,
+	round(subscribers*100.0/count(*) over (partition by vt.date_data)) as subscricers_percentage,
+	customers,
+	round( customers*100.0/count(*) over (partition by vt.date_data)) as  customers_percentage
+from
+	view_trip_top10 vt 
+join view_sub vs on vt.date_data = vs.date_data
+join view_cus vc on vt.date_data = vc.date_data
+order by
+	vt.date_data;
+	
+	
+			
+
+
