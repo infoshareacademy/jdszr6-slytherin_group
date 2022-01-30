@@ -7,6 +7,7 @@ Autorzy: Dominik Mikulski, Mateusz Kunik, Mateusz Religa, Joanna Witek, Joanna B
 
 
 wizualizacje:
+
 pierwsza i ostatnia strona:
 
 https://public.tableau.com/app/profile/joanna4173/viz/ProjektSQL_bikes6/futurework
@@ -31,3 +32,4 @@ https://public.tableau.com/app/profile/joanna4173/viz/ProjektSQL_bikes2/mapa
 analiza subskrybentow i customerow:
 
 https://public.tableau.com/app/profile/mateusz.kunik/viz/Subtype_16434883298130/Sheet1
+https://public.tableau.com/app/profile/mateusz.kunik/viz/subtype10/Sheet2
