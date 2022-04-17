@@ -1,0 +1,4 @@
+#special_dropdown .VirtualizedSelectFocusedOption {
+  background-color: green;
+  color: white;
+}
