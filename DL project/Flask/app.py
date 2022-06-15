@@ -6,8 +6,10 @@ import cv2
 from keras.models import load_model
 from keras.preprocessing import image
 
-from flask import Flask, redirect, render_template, request, url_for
+from flask import Flask, redirect, render_template, request, url_for, Response
 from werkzeug.utils import secure_filename
+
+from camera import Video
 
 
 
@@ -50,7 +52,7 @@ def index():
 
 
 
-@app.route("/basic_model/", methods=['GET', 'POST'])
+@app.route("/basic_model", methods=['GET', 'POST'])
 def basic_model():
     
     # do odczytu zdjęć
@@ -68,35 +70,24 @@ def basic_model():
 
 
 
-@app.route("/extra_model/", methods=['GET', 'POST'])
+@app.route("/extra_model", methods=['GET', 'POST'])
 def extra_model():
 
     return render_template("extra_model.html")
 
+def gen(camera):
+
+    while True:
+        frame = camera.get_frame()
+        yield(b'--frame\r\n'
+       b'Content-Type:  image/jpeg\r\n\r\n' + frame +
+         b'\r\n\r\n')
+
+@app.route("/video")
+def video():
+
+    return Response(gen(Video()),
+    mimetype='multipart/x-mixed-replace; boundary=frame')
 
 
-
-
-
-
-
-# @app.route('/')
-# def index():
-
-#     return "This is index"
-
-# @app.route('/exchange', methods=['GET', 'POST'])
-# def exchange():
-
-#     if request.method == "GET":
-#         return render_template('exchange.html')
-#     else:
-#         currency = "EUR"
-#         if "currency" in request.form:
-#             currency = request.form["currency"]
-
-#         amount = 100
-#         if "amount" in request.form:
-#             amount = request.form["amount"]
-        
-#         return render_template("exchange_results.html", currency=currency, amount=amount)
+app.run(debug=True)
