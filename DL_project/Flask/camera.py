@@ -4,7 +4,6 @@ import cv2
 faceDetect = cv2.CascadeClassifier("haarcascade_frontalface_default.xml")
 
 class Video(object):
-    
     def __init__(self):
         self.video = cv2.VideoCapture(0)
 

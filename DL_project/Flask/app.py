@@ -1,37 +1,36 @@
-import os
-import uuid
-import json
+#import os
+#import uuid
+#import json
 import cv2
 
-from keras.models import load_model
-from keras.preprocessing import image
+#from keras.models import load_model
+#from keras.preprocessing import image
 
 from flask import Flask, redirect, render_template, request, url_for, Response
-from werkzeug.utils import secure_filename
-
+#from werkzeug.utils import secure_filename
 from camera import Video
 
 
 
 app = Flask(__name__)
-app.config['UPLOAD_FOLDER'] = 'static/uploads'
+#app.config['UPLOAD_FOLDER'] = 'static/uploads'
 
 
-MODELS_PATH = "Models/"
-BASIC_MODEL_NAME = "first"
+#MODELS_PATH = "Models/"
+#BASIC_MODEL_NAME = "first"
 #EXTRA_MODEL_NAME = "extra_model.h5"
 
-IMAGE_PATH = "zdjecie.png"
+#IMAGE_PATH = "zdjecie.png"
 
-model = load_model(filepath = MODELS_PATH + BASIC_MODEL_NAME)
+#model = load_model(filepath = MODELS_PATH + BASIC_MODEL_NAME)
 
 
-def model_predict(model, img_path):
+# def model_predict(model, img_path):
     
-    image = cv2.cvtColor(cv2.resize(cv2.imread(img_path), (28, 28)), cv2.COLOR_BGR2GRAY)
-    pred = model.predict(image)
+#     image = cv2.cvtColor(cv2.resize(cv2.imread(img_path), (28, 28)), cv2.COLOR_BGR2GRAY)
+#     pred = model.predict(image)
     
-    return pred
+#     return pred
 
 
 
@@ -70,22 +69,23 @@ def basic_model():
 
 
 
-@app.route("/extra_model", methods=['GET', 'POST'])
+@app.route('/extra_model')
 def extra_model():
 
-    return render_template("extra_model.html")
+    return render_template('extra_model.html')
 
 def gen(camera):
 
     while True:
-        frame = camera.get_frame()
+        frame=camera.get_frame()
         yield(b'--frame\r\n'
        b'Content-Type:  image/jpeg\r\n\r\n' + frame +
          b'\r\n\r\n')
 
-@app.route("/video")
-def video():
 
+@app.route('/video')
+def video():
+    
     return Response(gen(Video()),
     mimetype='multipart/x-mixed-replace; boundary=frame')
 
