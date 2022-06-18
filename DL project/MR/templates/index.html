@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <title>Image Classification</title>
+  <title>Slytherin Predict Page</title>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css">
@@ -11,7 +11,7 @@
 <body>
 
 <div class="container">
-  <h1 class="jumbotron bg-primary">Image Classfication</h1>
+  <h1 class="jumbotron bg-primary">Slytherin Predict Page</h1>
   <br><br>
   <form class="form-horizontal" action="/submit" method="post" enctype="multipart/form-data">
 
@@ -29,6 +29,7 @@
     </div>
   </form>
 
+  <!--<img src="{{img_path}}" height="400px" width="400px">-->
 	{% if prediction %}
   <img src="{{img_path}}" height="400px" width="400px">
 	<h2> Your Prediction   : <i> {{prediction}} </i></h2>
