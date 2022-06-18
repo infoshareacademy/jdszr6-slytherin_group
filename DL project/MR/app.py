@@ -17,18 +17,15 @@ model = load_model('model.h5')
 
 model.make_predict_function()
 
+# DEF for model processing
 def predict_label(img_path):
 	i = cv2.imread(img_path, cv2.IMREAD_UNCHANGED)
 	i = cv2.cvtColor(i, cv2.COLOR_BGR2GRAY)
 	i = cv2.resize(i, (28,28))
 	i = i.reshape(1,28,28,1)
-    # i = tf.keras.utils.load_img(img_path, target_size=(28,28,1))
-    # i = tf.keras.utils.img_to_array(i)/255.0
-    # #i = i[:,:,0]
-    # i = i.reshape(28,28,1)
 	p = model.predict(i, verbose=0).argmax()
+	#p = dic[p[0]]
 	return p
-	#return dic[p[0]]
 
 
 # routes
@@ -38,7 +35,7 @@ def main():
 
 @app.route("/about")
 def about_page():
-	return "Slytherin"
+	return "Slytherin group people: Joanna Witek, Joanna Borowa, Mateusz Kunik, Dominik Mikulski, Mateusz Religa"
 
 @app.route("/submit", methods = ['GET', 'POST'])
 def get_output():
@@ -52,12 +49,10 @@ def get_output():
 		json.dumps({'filename':f_name})
 		
 		img_path = (f"static/uploads/{f_name}")
-		#img.save(img_path)
-        #print(img_path)
 
 		p = predict_label(img_path)
 
-	return render_template("index.html", img_path = img_path, prediction = p)
+	return render_template("index.html", img_path = img_path, prediction = dic[p])
 
 
 if __name__ =='__main__':
