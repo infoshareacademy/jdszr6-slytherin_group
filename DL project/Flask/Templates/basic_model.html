@@ -1,38 +1,43 @@
 <!DOCTYPE html>
-<html>
-    <head>
-        <title>BasicModelPage</title>
-        <meta charset="="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    </head>
-    <body>
-        <h1>Basic model &#8211 Batch Object Detection</h1>
-        
-        <div>
-            <form id="upload-file" method="post" enctype="multipart/form-data">
+<html lang="en">
+<head>
+  <title>Slytherin Predict Page</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css">
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"></script>
+</head>
+<body>
 
-                <label for="imageUpload" class="upload-label">
-                    Choose image
-                </label>
-                <input type="file" name="file" id="imageUpload" accept=".png, .jpg, .jpeg">
-            </form>
-        
-            <div class="image-section" style="display:none;">
-                <div class="img-preview">
-                    <div id="imagePreview">
-                    </div>
-                </div>
-                <div>
-                    <button type="button" class="btn btn-primary btn-lg " id="btn-predict">Predict!</button>
-                </div>
-            </div>
-        
-            <div class="loader" style="display:none;"></div>
-        
-            <h3 id="result">
-                <span> </span>
-            </h3>
-        
-        </div>
-    </body>
+<div class="container">
+  <h1 class="jumbotron bg-success">Slytherin Predict Page</h1>
+  <p class = lead>Welcome to Slytheron Group! On this page you will predict sign language from photo</p>
+  <br><br>
+  <form class="form-horizontal" action="/submit" method="post" enctype="multipart/form-data">
+
+    <div class="form-group">
+      <label class="control-label col-sm-2" for="pwd">Upload Your Image :</label>
+      <div class="col-sm-10">          
+        <input type="file" class="form-control" placeholder="Hours Studied"  name="my_image" id="pwd">
+      </div>
+    </div>
+
+    <div class="form-group">        
+      <div class="col-sm-offset-2 col-sm-10">
+        <button type="submit" class="btn btn-success">Submit</button>
+      </div>
+    </div>
+  </form>
+
+  <!--<img scr= "sign.jpg" height="400px" width="600px" alt="sign_language">-->
+  <img src= "https://www.researchgate.net/publication/328396430/figure/fig1/AS:683619848830976@1539999081795/The-26-letters-and-10-digits-of-American-Sign-Language-ASL.jpg" height="350px" width="600px"><!-- alt="sign_language">-->
+  {% if prediction %}
+  <img src="{{img_path}}" height="350px" width="350px">
+	<h2> Your Prediction   : <i> {{prediction}} </i></h2>
+
+	{% endif %}
+
+</div>
+</body>
 </html>
