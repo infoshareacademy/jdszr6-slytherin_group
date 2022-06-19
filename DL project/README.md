@@ -10,7 +10,9 @@ Authors: Mateusz Religa, Mateusz Kunik, Dominik Mikulski, Joanna Witek, Joanna B
 
 Data Source:https://www.kaggle.com/datasets/datamunge/sign-language-mnist
 
-Application Guide: Our application consists of following tabs:
+Application Guide: Our application consists of following modules:
+-batch
+-real time
 
 
 The application is created in Flask. In order to run it, you need to ...
