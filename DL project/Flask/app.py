@@ -2,41 +2,20 @@ import os
 import uuid
 import json
 
-import numpy as np
-import cv2
-
-from tensorflow.keras.models import load_model
-
-
 from flask import Flask, redirect, render_template, request, url_for, Response
-from camera import Video
 
+from model import Classifier
+from camera import Video
 
 
 
 MODELS_PATH = "Models/"
 MODEL_NAME = "model.h5"
+FULL_PATH = MODELS_PATH + MODEL_NAME
 
-model = load_model(filepath = MODELS_PATH + MODEL_NAME)
+clf_model = Classifier(FULL_PATH)
 
 class_names = list("ABCDEFGHI KLMNOPQRSTUVWXY")
-
-
-
-def model_predict(model, image, batch = True):
-
-    if batch:
-        image = cv2.imread(image, cv2.IMREAD_UNCHANGED)
-    
-    image = cv2.cvtColor(cv2.resize(image, (28, 28)), cv2.COLOR_BGR2GRAY)
-    x = image.reshape(1, 28, 28, 1)
-
-    predict = model.predict(x)
-    classes = np.argmax(predict, axis=1)
-
-    return np.array(class_names)[classes][0]
-
-
 
 
 app = Flask(__name__)
@@ -75,7 +54,7 @@ def get_output():
         json.dumps({'filename':f_name})
         
         img_path = (f"static/uploads/{f_name}")
-        predict = model_predict(model, img_path)
+        predict = clf_model.get_predict(img_path, class_names)
         
         
     return render_template("basic_model.html", img_path = img_path, prediction = predict)
@@ -98,7 +77,7 @@ def gen(camera):
 @app.route('/video')
 def video():
     
-    return Response(gen(Video()),
+    return Response(gen(Video(FULL_PATH)),
     mimetype='multipart/x-mixed-replace; boundary=frame')
 
 app.run(debug=True)
