@@ -7,7 +7,7 @@ class_names = list("ABCDEFGHI KLMNOPQRSTUVWXY")
 class Video(object):
     def __init__(self, model_path):
         self.video = cv2.VideoCapture(0)
-        self.clf_model = Classifier(model_path)
+        self.clf_model = Classifier(model_path, class_names)
 
     def __del__(self):
         self.video.release()
@@ -33,7 +33,7 @@ class Video(object):
         square_box = [(width, 3*height), (width + 4*main_size, 3*height + 4*main_size)]
 
         roi = frame[square_box[0][1] : square_box[1][1], square_box[0][0] : square_box[1][0]]
-        result = self.clf_model.get_predict(roi, class_names, batch=False)
+        result = self.clf_model.get_predict(roi, batch=False)
         
         cv2.putText(frame, result, square_box[0], cv2.FONT_HERSHEY_COMPLEX, 3, frame_color, frame_thickness)
         cv2.rectangle(overlay, square_box[0], square_box[1], frame_color, -1)
@@ -42,4 +42,4 @@ class Video(object):
         _, jpg = cv2.imencode(".jpg", new_frame)
 
 
-        return jpg.tobytes()
+        return result, jpg.tobytes()

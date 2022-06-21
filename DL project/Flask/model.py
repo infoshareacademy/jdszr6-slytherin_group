@@ -5,11 +5,12 @@ from tensorflow.keras.models import load_model
 
 class Classifier(object):
 
-    def __init__(self, path):
+    def __init__(self, path, class_names):
         self.path = path
+        self.class_names = class_names
 
 
-    def get_predict(self, image, class_names, batch = True):
+    def get_predict(self, image, batch = True):
 
         model = load_model(self.path)
 
@@ -22,4 +23,4 @@ class Classifier(object):
         predict = model.predict(x)
         classes = np.argmax(predict, axis=1)
 
-        return np.array(class_names)[classes][0]
+        return np.array(self.class_names)[classes][0]

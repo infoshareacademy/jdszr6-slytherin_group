@@ -8,14 +8,14 @@ from model import Classifier
 from camera import Video
 
 
+class_names = list("ABCDEFGHI KLMNOPQRSTUVWXY")
 
 MODELS_PATH = "Models/"
 MODEL_NAME = "model.h5"
 FULL_PATH = MODELS_PATH + MODEL_NAME
 
-clf_model = Classifier(FULL_PATH)
+clf_model = Classifier(FULL_PATH, class_names)
 
-class_names = list("ABCDEFGHI KLMNOPQRSTUVWXY")
 
 
 app = Flask(__name__)
@@ -69,11 +69,11 @@ def extra_model():
 def gen(camera):
 
     while True:
-        frame=camera.get_frame()
+        result, frame=camera.get_frame()
         yield(b'--frame\r\n'
        b'Content-Type:  image/jpeg\r\n\r\n' + frame +
          b'\r\n\r\n')
-
+        
 @app.route('/video')
 def video():
     
