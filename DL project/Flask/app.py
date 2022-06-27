@@ -2,56 +2,43 @@ import os
 import uuid
 import json
 
-import numpy as np
-import cv2
-
-from tensorflow.keras.models import load_model
-
-
 from flask import Flask, redirect, render_template, request, url_for, Response
+
+from model import Classifier
 from camera import Video
 
 
-
+class_names = list("ABCDEFGHI KLMNOPQRSTUVWXY")
 
 MODELS_PATH = "Models/"
 MODEL_NAME = "model.h5"
+FULL_PATH = MODELS_PATH + MODEL_NAME
 
-model = load_model(filepath = MODELS_PATH + MODEL_NAME)
-
-class_names = list("ABCDEFGHI KLMNOPQRSTUVWXY")
-
-
-
-def model_predict(model, image, batch = True):
-
-    if batch:
-        image = cv2.imread(image, cv2.IMREAD_UNCHANGED)
-    
-    image = cv2.cvtColor(cv2.resize(image, (28, 28)), cv2.COLOR_BGR2GRAY)
-    x = image.reshape(1, 28, 28, 1)
-
-    predict = model.predict(x)
-    classes = np.argmax(predict, axis=1)
-
-    return np.array(class_names)[classes][0]
-
+clf_model = Classifier(FULL_PATH, class_names)
 
 
 
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = 'static/uploads'
 
+
+
 @app.route("/", methods=["GET", "POST"])
 def index():
 
     if request.method == "POST":
-        if request.form.get("basic") == "Choose":
+        if request.form.get("basic_button") == "Choose":
             return redirect(url_for("basic_model"))
-        elif request.form.get("extra") == "Choose":
+
+        elif request.form.get("extra_button") == "Choose":
             return redirect(url_for("extra_model"))
+
+        elif request.form.get("practice_button") == "Practice!":
+            return redirect(url_for("learning_page"))
+
         else:
             pass
+
     elif request.method == "GET":
         return render_template("index.html")
 
@@ -75,7 +62,7 @@ def get_output():
         json.dumps({'filename':f_name})
         
         img_path = (f"static/uploads/{f_name}")
-        predict = model_predict(model, img_path)
+        predict = clf_model.get_predict(img_path, class_names)
         
         
     return render_template("basic_model.html", img_path = img_path, prediction = predict)
@@ -90,15 +77,36 @@ def extra_model():
 def gen(camera):
 
     while True:
-        frame=camera.get_frame()
+        result, frame=camera.get_frame()
         yield(b'--frame\r\n'
        b'Content-Type:  image/jpeg\r\n\r\n' + frame +
          b'\r\n\r\n')
-
+        
 @app.route('/video')
 def video():
     
-    return Response(gen(Video()),
+    return Response(gen(Video(FULL_PATH)),
     mimetype='multipart/x-mixed-replace; boundary=frame')
+
+
+
+@app.route('/learning')
+def practice():
+
+    return render_template('learning.html')
+
+# def gen(camera):
+
+#     while True:
+#         result, frame=camera.get_frame()
+#         yield(b'--frame\r\n'
+#        b'Content-Type:  image/jpeg\r\n\r\n' + frame +
+#          b'\r\n\r\n')
+        
+# @app.route('/practice_video')
+# def practice_video():
+    
+#     return Response(gen(Video(FULL_PATH)),
+#     mimetype='multipart/x-mixed-replace; boundary=frame')
 
 app.run(debug=True)
