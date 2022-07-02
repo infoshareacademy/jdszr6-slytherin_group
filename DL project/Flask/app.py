@@ -8,7 +8,7 @@ from model import Classifier
 from camera import Video
 
 
-class_names = list("ABCDEFGHI KLMNOPQRSTUVWXY")
+class_names = list("ABCDEFGHIKLMNOPQRSTUVWXY")
 
 MODELS_PATH = "Models/"
 MODEL_NAME = "model.h5"
