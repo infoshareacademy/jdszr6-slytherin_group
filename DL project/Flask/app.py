@@ -95,18 +95,5 @@ def practice():
 
     return render_template('learning.html')
 
-# def gen(camera):
-
-#     while True:
-#         result, frame=camera.get_frame()
-#         yield(b'--frame\r\n'
-#        b'Content-Type:  image/jpeg\r\n\r\n' + frame +
-#          b'\r\n\r\n')
-        
-# @app.route('/practice_video')
-# def practice_video():
-    
-#     return Response(gen(Video(FULL_PATH)),
-#     mimetype='multipart/x-mixed-replace; boundary=frame')
 
 app.run(debug=True)

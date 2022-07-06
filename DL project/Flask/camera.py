@@ -1,7 +1,7 @@
 import cv2
 from model import Classifier
 
-class_names = list("ABCDEFGHI KLMNOPQRSTUVWXY")
+class_names = list("ABCDEFGHIKLMNOPQRSTUVWXY")
 
 
 class Video(object):
