@@ -10,9 +10,10 @@ Authors: Mateusz Religa, Mateusz Kunik, Dominik Mikulski, Joanna Witek, Joanna B
 
 Data Source:https://www.kaggle.com/datasets/datamunge/sign-language-mnist
 
-Application Guide: Our application consists of following modules:
--batch
--real time
+Application Guide: 
+Our application consists of following modules:
+-batch - please upload a photo to see what letter the sign stands for
+-real time - please switch on a camera and show a sign in order to know which letter the sign stands for
 
 
-The application is created in Flask. In order to run it, you need to ...
+
