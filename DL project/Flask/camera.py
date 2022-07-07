@@ -39,7 +39,7 @@ class Video(object):
         
         cv2.putText(frame, result, (width, 3*height - 10), cv2.FONT_HERSHEY_TRIPLEX, 3, frame_contour, frame_thickness)
         
-        cv2.rectangle(frame, square_box[0], square_box[1], frame_color, -1)
+        #cv2.rectangle(frame, square_box[0], square_box[1], frame_color, -1)
         cv2.rectangle(frame, square_box[0], square_box[1], frame_contour, 6)
         
         new_frame = cv2.addWeighted(frame, alpha, overlay, 1 - alpha, 0)
