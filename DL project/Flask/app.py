@@ -8,10 +8,10 @@ from model import Classifier
 from camera import Video
 
 
-class_names = list("ABCDEFGHI KLMNOPQRSTUVWXY")
+class_names = list("ABCDEFGHIKLMNOPQRSTUVWXY")
 
 MODELS_PATH = "Models/"
-MODEL_NAME = "model.h5"
+MODEL_NAME = "test.h5"
 FULL_PATH = MODELS_PATH + MODEL_NAME
 
 clf_model = Classifier(FULL_PATH, class_names)
@@ -96,18 +96,6 @@ def practice():
 
     return render_template('learning.html')
 
-# def gen(camera):
 
-#     while True:
-#         result, frame=camera.get_frame()
-#         yield(b'--frame\r\n'
-#        b'Content-Type:  image/jpeg\r\n\r\n' + frame +
-#          b'\r\n\r\n')
-        
-# @app.route('/practice_video')
-# def practice_video():
-    
-#     return Response(gen(Video(FULL_PATH)),
-#     mimetype='multipart/x-mixed-replace; boundary=frame')
 
 app.run(debug=True)

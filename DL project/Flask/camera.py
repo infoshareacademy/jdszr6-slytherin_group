@@ -1,10 +1,11 @@
 import cv2
 from model import Classifier
 
-class_names = list("ABCDEFGHI KLMNOPQRSTUVWXY")
+class_names = list("ABCDEFGHIKLMNOPQRSTUVWXY")
 
 
 class Video(object):
+    
     def __init__(self, model_path):
         self.video = cv2.VideoCapture(0)
         self.clf_model = Classifier(model_path, class_names)
