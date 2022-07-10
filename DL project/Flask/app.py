@@ -10,34 +10,9 @@ from flask import Flask, redirect, render_template, request, url_for, Response
 
 
 
-
-class Classifier(object):
-    def __init__(self, path, class_names):
-        self.path = path
-        self.class_names = class_names
-
-    def get_predict(self, image, batch = True):
-
-        model = load_model(self.path)
-
-        if batch:
-            image = cv2.imread(image, cv2.IMREAD_UNCHANGED)
-
-        image = cv2.cvtColor(cv2.resize(image, (28, 28)), cv2.COLOR_BGR2GRAY)
-        x = image.reshape(1, 28, 28, 1)
-        
-        prediction = model.predict(x)
-
-        indicator = prediction.argmax()
-        sign = np.array(class_names)[indicator]
-        probability = prediction[np.arange(prediction.shape[0]), indicator][0]
-
-        return sign, probability
-
 class Video(object):
-    def __init__(self, model_path):
+    def __init__(self):
         self.video = cv2.VideoCapture(0)
-        self.clf_model = Classifier(model_path, class_names)
 
     def __del__(self):
         self.video.release()
@@ -49,7 +24,6 @@ class Video(object):
         frame_thickness = 6
 
         _, frame = self.video.read()
-        overlay = frame.copy()
 
         height, width, channels = frame.shape
         height, width = height // 10, width // 10
@@ -62,7 +36,14 @@ class Video(object):
         square_box = [(width, 3*height), (width + 5*main_size, 3*height + 5*main_size)]
 
         roi = frame[square_box[0][1] : square_box[1][1], square_box[0][0] : square_box[1][0]]
-        sign, probability = self.clf_model.get_predict(roi, batch=False)
+        image = cv2.cvtColor(cv2.resize(roi, (28, 28)), cv2.COLOR_BGR2GRAY)
+        x = image.reshape(1, 28, 28, 1)
+        
+        prediction = model.predict(x)
+
+        indicator = prediction.argmax()
+        sign = np.array(class_names)[indicator]
+        probability = prediction[np.arange(prediction.shape[0]), indicator][0]
         
         cv2.putText(frame, "Sign: {}".format(sign), (width, 3*height - 40), cv2.FONT_HERSHEY_COMPLEX_SMALL, 2, text_colour, text_thickness+1)
         cv2.putText(frame, "Probability: %.2f" % round(probability, 3), (width, 3*height - 10), cv2.FONT_HERSHEY_COMPLEX_SMALL, 1, text_colour, text_thickness)
@@ -71,17 +52,13 @@ class Video(object):
         _, jpg = cv2.imencode(".jpg", frame)
         return sign, jpg.tobytes()
 
-
-
 class_names = list("ABCDEFGHIKLMNOPQRSTUVWXY")
 
 MODELS_PATH = "Models/"
 MODEL_NAME = "best_model.h5"
 FULL_PATH = MODELS_PATH + MODEL_NAME
 
-clf_model = Classifier(FULL_PATH, class_names)
-
-
+model = load_model(FULL_PATH)
 
 
 
@@ -128,11 +105,17 @@ def get_output():
         json.dumps({'filename':f_name})
         
         img_path = (f"static/uploads/{f_name}")
-        predict = clf_model.get_predict(img_path, class_names)[0]
-        
-        
-    return render_template("basic_model.html", img_path = img_path, prediction = predict)
+        image = cv2.imread(img_path, cv2.IMREAD_UNCHANGED)
+        image = cv2.cvtColor(cv2.resize(image, (28, 28)), cv2.COLOR_BGR2GRAY)
+        x = image.reshape(1, 28, 28, 1)
 
+        prediction = model.predict(x)
+
+        indicator = prediction.argmax()
+        sign = np.array(class_names)[indicator]
+        
+        
+    return render_template("basic_model.html", img_path = img_path, prediction = sign)
 
 
 @app.route('/extra_model')
@@ -152,9 +135,8 @@ def gen(camera):
 @app.route('/video')
 def video():
     
-    return Response(gen(Video(FULL_PATH)),
+    return Response(gen(Video()),
     mimetype='multipart/x-mixed-replace; boundary=frame')
-
 
 
 @app.route('/learning')
