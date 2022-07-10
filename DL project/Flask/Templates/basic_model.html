@@ -1,13 +1,15 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <title>Slytherin Predict Page</title>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css">
-  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
-  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"></script>
-</head>
+  <head>
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.1/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-+0n0xVW2eSR5OomGNYDnhzAbDsOXxcvSN1TPprVMTNDbiYZCxYbOOl7+AMvyTG2x" crossorigin="anonymous">
+
+    <title>Extra Model Page</title>
+  </head>
 <body>
 
 <div class="container">
@@ -30,8 +32,7 @@
     </div>
   </form>
 
-  <!--<img scr= "sign.jpg" height="400px" width="600px" alt="sign_language">-->
-  <img src= "https://www.researchgate.net/publication/328396430/figure/fig1/AS:683619848830976@1539999081795/The-26-letters-and-10-digits-of-American-Sign-Language-ASL.jpg" height="350px" width="600px"><!-- alt="sign_language">-->
+  <img src= "https://www.googleapis.com/download/storage/v1/b/kaggle-user-content/o/inbox%2F357637%2F6237b2fd781887e7c9e09ef6b7dc610b%2Famer_sign2.png?generation=1608488019646176&alt=media" height="350px" width="600px">
   {% if prediction %}
   <img src="{{img_path}}" height="350px" width="350px">
 	<h2> Your Prediction   : <i> {{prediction}} </i></h2>
